@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<People>
+    <person>
+        <age>31</age>
+        <name>견민석</name>
+        <gender>Male</gender>
+        <role>Java Developer</role>
+    </person>
+    <person>
+        <age>24</age>
+        <name>선형채</name>
+        <gender>Male</gender>
+        <role>Technical Provider</role>
+    </person>
+    <person>
+        <age>30</age>
+        <name>성채은</name>
+        <gender>Female</gender>
+        <role>Technical Provider</role>
+    </person>
+    <person>
+        <age>29</age>
+        <name>이슬민</name>
+        <gender>Male</gender>
+        <role>BackEnd</role>
+    </person>
+</People>

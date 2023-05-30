@@ -1,5 +1,7 @@
-package com.example.asyncprogramming.SimpleNettyServer;
+package com.example.asyncprogramming.saxParser.clients;
 
+import com.example.asyncprogramming.saxParser.handler.PeopleSaxHandler;
+import com.example.asyncprogramming.saxParser.model.Person;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -7,18 +9,16 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.concurrent.DefaultThreadFactory;
-
+import org.xml.sax.SAXException;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
+import java.io.File;
+import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.Scanner;
+import java.util.List;
 
-/**
- * 서버에 문자열을 전송하는 클라이언트 구현 메인 클래스
- * 1. EventLoopGroup 생성
- * 2. Bootstrap 생성 및 설정
- * 3. ChannelInitializer 생성
- * 4. Client 시작
- */
-public class Client {
+public class NettyClient {
     private static final int SERVER_PORT = 11011;
     private final String host;
     private final int port;
@@ -26,8 +26,7 @@ public class Client {
     private Channel serverChannel;
     private EventLoopGroup eventLoopGroup;
 
-
-    public Client(String host, int port) {
+    public NettyClient(String host, int port) {
         this.host = host;
         this.port = port;
     }
@@ -46,34 +45,39 @@ public class Client {
         // handler() 메소드로 ClientInitialzer()를 넘겨준다.
         bootstrap.channel(NioSocketChannel.class);
         bootstrap.remoteAddress(new InetSocketAddress(host, port));
-        bootstrap.handler(new ClientInitializer());
+        bootstrap.handler(new NettyClientInitializer());
 
         // connect() 메소드로 서버 소켓에 연결을 하고 sync() 메소드로 기다린다.
         serverChannel = bootstrap.connect().sync().channel();
     }
 
     public void start() throws InterruptedException {
-        Scanner sc = new Scanner(System.in);
-
+        File file = new File("src/main/java/com/example/asyncprogramming/saxParser/people.xml");
         String message;
-        ChannelFuture future;
+        ChannelFuture future = null;
 
-        while (true) {
-            // 사용자 입력
-            message = sc.nextLine();
+        SAXParserFactory factory = SAXParserFactory.newInstance();
 
-            // Server로 전송
-            future = serverChannel.writeAndFlush(message.concat("\n"));
+        try {
+            SAXParser saxParser = factory.newSAXParser();
+            PeopleSaxHandler handler = new PeopleSaxHandler();
+            saxParser.parse(file, handler);
 
-            if ("quit".equals(message)) {
-                serverChannel.closeFuture().sync(); // 종료
-                break;
+            List<Person> list = handler.getPersonList();
+
+            for (Person p:list) {
+//                System.out.println(p);
+                message= String.valueOf(p);
+                future = serverChannel.writeAndFlush(message.concat("\n"));
             }
-        }
 
-        // 종료되기 전 모든 메시지가 flush 될때까지 기다린다.
-        if (future != null) {
-            future.sync();
+            // 종료되기 전 모든 메시지가 flush 될때까지 기다린다.
+            if (future != null) {
+                future.sync();
+            }
+            
+        }catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -81,9 +85,8 @@ public class Client {
         eventLoopGroup.shutdownGracefully();
     }
 
-    public static void main(String[] args) throws InterruptedException {
-        Client client = new Client("127.0.0.1", SERVER_PORT);
-
+    public static void main(String[] args) throws InterruptedException, ParserConfigurationException, IOException, SAXException {
+        NettyClient client = new NettyClient("127.0.0.1", SERVER_PORT);
         try {
             client.connect(); // 연결
             client.start(); // 시작
